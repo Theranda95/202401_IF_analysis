@@ -6,6 +6,7 @@ library(dplyr)
 library(ggbeeswarm) #needed for graphing 
 library(ggplot2) #needed for graphing 
 library(ggpubr)
+library(purrr) #needed for function map 
 library(stringr) #needed for extracting names from a string 
 ##-----------------------------------------------------
 #This is draft 1 of my script to prepare data sheets for plotting of fibrillarin data. 
@@ -97,7 +98,6 @@ head(count_puncta) #fib_count = puncta number and count = nuclei # with x number
 #Turning the above steps into a function 
 #Nested function 
 
-
 #####Function trial 1 
 process_folder <- function(folder_path) {
   setwd(folder_path)
@@ -150,59 +150,42 @@ process_folder <- function(folder_path) {
   return(list(final_data = final_data, count_puncta = count_puncta))
 }
 
-#####Function trial 2
-
-#process_files <- function(folder_path, fib_vol_pattern, nuc_num_foci_pattern, vol_ratio_pattern) {
-  # Read the first CSV file
-  fib_vol_file <- list.files(folder_path, pattern = fib_vol_pattern, full.names = TRUE)
-  data1 <- read.csv(fib_vol_file, skip = 3) %>%
-    rename(fib_vol = Nucleus.Volume, nuc_id = CellID) %>%
-    mutate(nuc_id = as.integer(ifelse(is.na(nuc_id), 0, nuc_id))) %>%  # Handling missing values
-    group_by(nuc_id) %>%
-    summarise(fib_tot_vol = sum(as.numeric(fib_vol, na.rm = TRUE)))
-  
-  # Read the second CSV file
-  nuc_num_foci_file <- list.files(folder_path, pattern = nuc_num_foci_pattern, full.names = TRUE)
-  data2 <- read.csv(nuc_num_foci_file, skip = 3) %>%
-    rename(fib_count = Cell.Number.Of.Nuclei, nuc_id = ID)
-  
-  # Read the third CSV file
-  volume_ratio_file <- list.files(folder_path, pattern = volume_ratio_pattern, full.names = TRUE)
-  data3 <- read.csv(volume_ratio_file, skip = 3) %>%
-    rename(fib_nuc_ratio = Cell.Nucleus.to.Cytoplasm.Volume.Ratio, nuc_id = ID)
-  
-  # Join data2 to data1
-  data12 <- left_join(data2, data1, by = "nuc_id")
-  
-  # Join data3 to data12
-  data123 <- left_join(data12, data3, by = "nuc_id")
-  
-  # Clean up the data frame
-  cleaned_data <- data123 %>%
-    select(-2:-4, -6, -9:-12) %>%
-    mutate(fib_ave_vol = fib_tot_vol / fib_count)
-  
-  return(cleaned_data)
-}
-
-##Calling the function for a single folder 
-#result_single_folder <- process_files(single_folder_path, "fib_vol", "cel_num_foci", "volume_ratio")
-
 # Specify the main folder containing subfolders with CSV files
-main_folder <- "/Users/therandajashari/Documents/experiments_2024/20240124_comb_seq_comparisons/240124_fibrillarin/2402_spreadsheets/240206_wt26_gr"
+main_folder <- "/Users/therandajashari/Documents/experiments_2024/20240124_comb_seq_comparisons/240124_fibrillarin/2402_spreadsheets"
 
 # Get a list of subfolders
 subfolders <- list.dirs(main_folder, recursive = FALSE)
 
-# Process each subfolder
 # Calling the function process_folder
 result_list <- lapply(subfolders, process_folder)
 
-# Combine the results from all subfolders
-final_results <- bind_rows(result_list)
+# Combine final_data data frames from all subfolders
+all_data_grouped <- bind_rows(result_list %>% map("final_data"))
+# Combine count_puncta data frames from all subfolders
+all_puncta_grouped <- bind_rows(result_list %>% map("count_puncta"))
 
-final_ave_results <- bind_rows(lapply(result_list, function(result) result$ave_result))
-final_count_puncta <- bind_rows(lapply(result_list, function(result) result$count_puncta))
+# Save the master spreadsheets
+write.csv(all_data_grouped, file = "all_data_grouped.csv", row.names = FALSE)
+write.csv(all_puncta_grouped, file = "all_puncta_grouped.csv", row.names = FALSE)
 
+# Create and save average spreadsheets for each column - not really what this is doing 
+##Need to check and understand it better! 
+average_data <- all_data_grouped %>%
+  group_by(condition, genotype, image) %>%
+  summarise(across(starts_with("fib_"), mean, na.rm = TRUE))
 
+for (subfolder in subfolders) {
+  folder_name <- basename(subfolder)
+  subfolder_average_data <- average_data %>%
+    filter(condition == str_extract(folder_name, "(?<=_)[^_]+"),
+           genotype == str_extract(folder_name, "^[^_]+"),
+           image == str_extract(folder_name, "(?<=_)[^_]+$"))
+  write.csv(subfolder_average_data, file = paste0(subfolder, "/average_data.csv"), row.names = FALSE)
+}
+
+# Combine average data frames from all subfolders
+all_average_data <- bind_rows(result_list %>% map("average_data"))
+
+# Save the master average spreadsheet
+write.csv(average_data, file = "all_average_data.csv", row.names = FALSE)
 
