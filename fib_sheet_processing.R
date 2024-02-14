@@ -104,8 +104,8 @@ process_folder <- function(folder_path) {
   folder_name <- basename(folder_path)
   file_list <- list.files(pattern = "*.csv")
   
-  data_list <- lapply(file_list, function(file) {
-    if (grepl("fib_vol",file, ignore.case = TRUE)) {
+    for (file in file_list) { 
+      if (grepl("fib_vol",file, ignore.case = TRUE)) {
       # Import spreadsheet without the first two rows
       data <- read.csv(file, skip = 3)
       
@@ -124,7 +124,7 @@ process_folder <- function(folder_path) {
       data3 <- read.csv(file, skip = 3) %>%
         rename(fib_nuc_ratio = Cell.Nucleus.to.Cytoplasm.Volume.Ratio, nuc_id = ID)
     }
-  })
+  }
   
   # Combine the processed data frames
   final_data <- left_join(data2, data1, by = "nuc_id") %>%
@@ -152,7 +152,7 @@ process_folder <- function(folder_path) {
 
 #####Function trial 2
 
-process_files <- function(folder_path, fib_vol_pattern, nuc_num_foci_pattern, vol_ratio_pattern) {
+#process_files <- function(folder_path, fib_vol_pattern, nuc_num_foci_pattern, vol_ratio_pattern) {
   # Read the first CSV file
   fib_vol_file <- list.files(folder_path, pattern = fib_vol_pattern, full.names = TRUE)
   data1 <- read.csv(fib_vol_file, skip = 3) %>%
@@ -189,7 +189,7 @@ process_files <- function(folder_path, fib_vol_pattern, nuc_num_foci_pattern, vo
 #result_single_folder <- process_files(single_folder_path, "fib_vol", "cel_num_foci", "volume_ratio")
 
 # Specify the main folder containing subfolders with CSV files
-main_folder <- "/Users/therandajashari/Documents/experiments_2024/20240124_comb_seq_comparisons/240124_fibrillarin/240202_test"
+main_folder <- "/Users/therandajashari/Documents/experiments_2024/20240124_comb_seq_comparisons/240124_fibrillarin/2402_spreadsheets/240206_wt26_gr"
 
 # Get a list of subfolders
 subfolders <- list.dirs(main_folder, recursive = FALSE)
