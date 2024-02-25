@@ -92,7 +92,7 @@ head(count_puncta) #fib_count = puncta number and count = nuclei # with x number
 ###----------Make the code above into a function -------------------------------
 
 # Data is separated into different folders and each folder has three .csv files with common 
-# identifiers fib_vol, vol_ratio and nuc_num_foci. Each folder has three identifiers: genotype, 
+# identifiers fib_vol, vol_ratio and nuc_num_foci. Each folder name has three identifiers: genotype, 
 # condition and image. 
 
 #Turning the above steps into a function 
